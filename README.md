@@ -41,8 +41,8 @@ TVQA+: Spatio-Temporal Grounding for Video Question Answering.<br>
 @inproceedings{lei2019tvqa,
   title={TVQA+: Spatio-Temporal Grounding for Video Question Answering},
   author={Lei, Jie and Yu, Licheng and Berg, Tamara L and Bansal, Mohit},
-  booktitle={EMNLP},
-  year={2018}
+  booktitle={Tech Report, arXiv},
+  year={2019}
 }
 ```
 
