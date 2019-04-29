@@ -21,10 +21,10 @@ In this repository, we provide PyTorch Implementation of the STAGE model, along 
 preprocessing and evaluation code for TVQA+ dataset.
 
 
-TVQA+: Spatio-Temporal Grounding for Video Question Answering.<br>
+[TVQA+: Spatio-Temporal Grounding for Video Question Answering](https://arxiv.org/abs/1904.11574)<br>
 [Jie Lei](http://www.cs.unc.edu/~jielei/),  [Licheng Yu](http://www.cs.unc.edu/~licheng/), 
 [Tamara L. Berg](http://Tamaraberg.com), [Mohit Bansal](https://www.cs.unc.edu/~mbansal/). 
-   [[PDF]](~) [[TVQA+ Dataset]](http://tvqa.cs.unc.edu)
+   [[PDF]](https://arxiv.org/abs/1904.11574) [[TVQA+ Dataset]](http://tvqa.cs.unc.edu)
 
 
 ### Model
