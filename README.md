@@ -36,6 +36,27 @@ preprocessing and evaluation code for TVQA+ dataset.
 ![example_predictions](imgs/model_prediction.png) 
 
 
+
+### Training and Evaluation
+1, Download preprocessed features from [Google Drive](https://drive.google.com/drive/folders/1eTy69AgdJNs-bL_fNLlcC5pMS_QKowrf?usp=sharing). 
+[gdrive](https://github.com/prasmussen/gdrive) is a good tool to use. Move it to the root of this project, 
+make sure `release_path` in `run_main.sh` is pointing to the feature directory.
+
+2, Run in `debug` mode to test your environment, path settings:
+```
+bash run_main.sh debug
+```
+
+3, Train the full STAGE model:
+```
+bash run_main.sh --add_local
+```
+note you will need around 50 GB of memory to load the data. Otherwise, you can additionally add `--no_core_driver` flag to stop loading 
+all the features into memory. After the training, you should be able to get ~72.00% QA Acc, which is comparable to the reported number. 
+
+4, Evaluation (TODO)
+
+
 ### Citation
 ```
 @inproceedings{lei2019tvqa,
@@ -47,8 +68,8 @@ preprocessing and evaluation code for TVQA+ dataset.
 ```
 
 ### TODO
-1. [ ] Add data preprocessing scripts
-2. [ ] Add model and training scripts
+1. [-] Add data preprocessing scripts (provided preprocessed features)
+2. [-] Add model and training scripts
 3. [ ] Add inference and evaluation scripts
 
 
