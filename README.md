@@ -36,6 +36,14 @@ preprocessing and evaluation code for TVQA+ dataset.
 ![example_predictions](imgs/model_prediction.png) 
 
 
+### Requirements
+- Python 2.7
+- PyTorch 1.1.0 (should work for 0.4.0 - 1.2.0)
+- tensorboardX
+- tqdm
+- h5py
+- numpy
+
 
 ### Training and Evaluation
 1, Download preprocessed features from [Google Drive](https://drive.google.com/drive/folders/1eTy69AgdJNs-bL_fNLlcC5pMS_QKowrf?usp=sharing). 
