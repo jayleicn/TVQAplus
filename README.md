@@ -39,8 +39,7 @@ preprocessing and evaluation code for TVQA+ dataset.
 
 ### Training and Evaluation
 1, Download preprocessed features from [Google Drive](https://drive.google.com/drive/folders/1eTy69AgdJNs-bL_fNLlcC5pMS_QKowrf?usp=sharing). 
-[gdrive](https://github.com/prasmussen/gdrive) is a good tool to use. Move it to the root of this project, 
-make sure `release_path` in `run_main.sh` is pointing to the feature directory.
+We recommend using [gdrive](https://github.com/prasmussen/gdrive) to download it from command line. When finished, move it to the root of this project, make sure `release_path` in `run_main.sh` is pointing to the feature directory.
 
 2, Run in `debug` mode to test your environment, path settings:
 ```
@@ -68,8 +67,8 @@ all the features into memory. After the training, you should be able to get ~72.
 ```
 
 ### TODO
-1. [-] Add data preprocessing scripts (provided preprocessed features)
-2. [-] Add model and training scripts
+1. [x] Add data preprocessing scripts (provided preprocessed features)
+2. [x] Add model and training scripts
 3. [ ] Add inference and evaluation scripts
 
 
