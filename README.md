@@ -36,6 +36,14 @@ preprocessing and evaluation code for TVQA+ dataset.
 ![example_predictions](imgs/model_prediction.png) 
 
 
+### Requirements
+- Python 2.7
+- PyTorch 1.1.0 (should work for 0.4.0 - 1.2.0)
+- tensorboardX
+- tqdm
+- h5py
+- numpy
+
 
 ### Training and Evaluation
 1, Download and uncompress preprocessed features from 
@@ -88,9 +96,9 @@ To evaluate test set, please follow instructions [here](http://tvqa.cs.unc.edu/l
 ```
 
 ### TODO
-1. [-] Add data preprocessing scripts (provided preprocessed features)
-2. [-] Add model and training scripts
-3. [-] Add inference and evaluation scripts
+1. [x] Add data preprocessing scripts (provided preprocessed features)
+2. [x] Add model and training scripts
+3. [x] Add inference and evaluation scripts
 
 
 ### Contact
