@@ -121,10 +121,12 @@ class BaseOptions(object):
                                  help="path to download Glove embeddings, you can download it by using "
                                       "`wget http://nlp.stanford.edu/data/glove.6B.zip -q --show-progress`")
         self.parser.add_argument("--word2idx_path", type=str)
+        self.parser.add_argument("--eval_object_vocab_path", type=str)
         self.parser.add_argument("--qa_bert_path", type=str, default="")
         self.parser.add_argument("--sub_bert_path", type=str, default="")
-        self.parser.add_argument("--train_path", type=str, default="")
-        self.parser.add_argument("--valid_path", type=str, default="")
+        self.parser.add_argument("--train_path", type=str)
+        self.parser.add_argument("--valid_path", type=str)
+        self.parser.add_argument("--test_path", type=str)
         self.parser.add_argument("--vcpt_path", type=str, default="")
         self.parser.add_argument("--vfeat_path", type=str, default="")
         self.parser.add_argument("--vfeat_size", type=int, default=300, help="dimension of the video feature")
@@ -167,8 +169,8 @@ class BaseOptions(object):
         if isinstance(self, TestOptions):
             options = load_json(os.path.join("results", opt.model_dir, "opt.json"))
             for arg in options:
-                # if arg not in ["vcpt_path", "debug"]:
-                setattr(opt, arg, options[arg])
+                if arg not in ["debug"]:
+                    setattr(opt, arg, options[arg])
             opt.no_core_driver = True
         else:
             mkdirp(opt.results_dir)

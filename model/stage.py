@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import pprint
+from collections import defaultdict
 
 from context_query_attention import StructuredAttention
 from encoder import StackedEncoder
@@ -54,6 +56,7 @@ class STAGE(nn.Module):
     def __init__(self, opt):
         super(STAGE, self).__init__()
         self.opt = opt
+        self.inference_mode = False
         self.sub_flag = opt.sub_flag
         self.vfeat_flag = opt.vfeat_flag
         self.vfeat_size = opt.vfeat_size
@@ -176,18 +179,6 @@ class STAGE(nn.Module):
 
         self.temporal_criterion = nn.CrossEntropyLoss(reduction="sum")
 
-        if self.add_local:
-            self.local_mapper = LinearWrapper(in_hsz=self.hsz,
-                                              out_hsz=self.hsz,
-                                              layer_norm=True,
-                                              dropout=self.dropout,
-                                              relu=True)
-            self.global_mapper = LinearWrapper(in_hsz=self.hsz,
-                                               out_hsz=self.hsz,
-                                               layer_norm=True,
-                                               dropout=self.dropout,
-                                               relu=True)
-
         self.classifier = LinearWrapper(in_hsz=self.hsz * 2 if self.add_local else self.hsz,
                                         out_hsz=1,
                                         layer_norm=True,
@@ -199,8 +190,11 @@ class STAGE(nn.Module):
         self.word_embedding.weight.requires_grad = requires_grad
 
     def forward(self, batch):
-        out, att_loss, att_predictions, temporal_loss, temporal_predictions, other_outputs = self.forward_main(batch)
-        return out, att_loss, att_predictions, temporal_loss, temporal_predictions
+        if self.inference_mode:
+            return self.forward_main(batch)
+        else:
+            out, att_loss, att_predictions, temporal_loss, temporal_predictions, other_outputs = self.forward_main(batch)
+            return out, att_loss, att_predictions, temporal_loss, temporal_predictions
 
     def forward_main(self, batch):
         """
@@ -300,9 +294,27 @@ class STAGE(nn.Module):
 
         other_outputs["temporal_scores"] = t_scores  # (N, 5, Li) or (N, 5, Li, 2)
 
+        if self.inference_mode:
+            inference_outputs = {
+                "answer": out,  # (N, 5)
+                "t_scores": F.softmax(t_scores, dim=2),
+                "att_predictions": self.get_att_prediction(
+                    scores=other_outputs["vid_raw_s"],
+                    object_vocab=batch.eval_object_word_ids,
+                    words=batch.qas,
+                    vid_names=batch.vid_name,
+                    qids=batch.qid,
+                    img_indices=batch.image_indices,
+                    boxes=batch.boxes,
+                    start_indices=batch.anno_st_idx,
+                ) if self.vfeat_flag else None,
+            }
+            return inference_outputs
+
         att_loss = 0
         att_predictions = None
-        if (self.use_sup_att or not self.training) and self.vfeat_flag:  # in order to eval for models without sup_att
+        # if (self.use_sup_att or not self.training) and self.vfeat_flag:
+        if self.use_sup_att and self.training and self.vfeat_flag:
             start_indices = batch.anno_st_idx
             try:
                 cur_att_loss, cur_att_predictions = \
@@ -420,8 +432,6 @@ class STAGE(nn.Module):
                     local_max_max_statement_list.append(torch.max(cur_span_max_statement, 1)[0])  # (5, D)
             local_max_max_statement = torch.stack(local_max_max_statement_list)  # (N_new, 5, D)
             global_max_max_statement = torch.stack(global_max_max_statement_list)  # (N_new, 5, D)
-            local_max_max_statement = self.local_mapper(local_max_max_statement)  # (N_new, 5, D)
-            global_max_max_statement = self.global_mapper(global_max_max_statement)  # (N_new, 5, D)
             max_max_statement = torch.cat([
                 local_max_max_statement,
                 global_max_max_statement], dim=-1)  # (N_new, 5, 2D)
@@ -451,8 +461,6 @@ class STAGE(nn.Module):
                 local_max_max_statement_list.append(torch.max(cur_span_max_statement, 0)[0])  # (D, )
             local_max_max_statement = torch.stack(local_max_max_statement_list)  # (N*5, D)
             global_max_max_statement = torch.stack(global_max_max_statement_list)  # (N*5, D)
-            local_max_max_statement = self.local_mapper(local_max_max_statement)  # (N*5, D)
-            global_max_max_statement = self.global_mapper(global_max_max_statement)  # (N*5, D)
             max_max_statement = torch.cat([
                 local_max_max_statement,
                 global_max_max_statement], dim=-1)  # (N_new, 5, 2D)
@@ -710,7 +718,6 @@ class STAGE(nn.Module):
                     print(row)
                     raise AssertionError
                 cur_det_data = {
-                        # "weak_gt": att_labels[batch_idx][img_idx-start_idx][word_idx].data.cpu(),
                         "pred": scores[batch_idx, ca_idx, img_idx, word_idx, :num_region].data.cpu(),
                         "word": words[batch_idx, ca_idx, word_idx],
                         "qid": qids[batch_idx],
@@ -737,3 +744,63 @@ class STAGE(nn.Module):
         else:
             raise NotImplementedError("Only support hinge and lse")
         return att_loss, att_predictions
+
+    def get_att_prediction(self, scores, object_vocab, words, vid_names, qids, img_indices, boxes,
+                           start_indices, score_thd=0.2):
+        """ compute ranking loss, use for loop to find the indices,
+        use advanced indexing to perform the real calculation
+        Build a list contains a quaduple
+
+        Args:
+            scores: cosine similarity scores (N, 5, Li, Lqa, Lr), in the range [-1, 1]
+            object_vocab: list, object word ids in the vocabulary
+            words: LongTensor (N, 5, Lqa)
+            vid_names: list(str) (N,)
+            qids: list(int), (N, )
+            img_indices: list(list(int)), (N, Li), or None
+            boxes: list(list(box)) of length N, each sublist represent an image,
+                each box contains the coordinates of xyxy, or None
+            start_indices (list of int): each element is an index (at 0.5fps) of the first image
+                with spatial annotation. If with_ts, set to zero
+            score_thd: only keep boxes with score higher than this value
+        Returns:
+            att_loss: loss value for the batch
+            att_predictions: (list) [{"gt": gt_scores, "pred": pred_scores}, ], used to calculate att. accuracy
+        """
+        # contain all the predictions and gt labels in this batch, only consider the ones with gt labels
+        # also only consider the positive answer.
+        att_predictions = None
+        if self.vfeat_flag:
+            att_predictions = []
+            for batch_idx in range(len(scores)):
+                start_idx = start_indices[batch_idx]  # int
+                q_att_predictions = dict()  # predictions associated with this question
+                for ans_idx in range(5):
+                    q_att_predictions[ans_idx] = []
+                    for img_idx_local in range(len(boxes[batch_idx])):
+                        # img_idx_local: for the imgs with box anno
+                        # img_idx_global: for all the imgs, including ones without box anno
+                        img_idx_global = img_idx_local + start_idx
+                        cur_img_scores = scores[batch_idx, ans_idx, img_idx_global]  # (Lqa, Lr)
+                        cur_words = words[batch_idx, ans_idx].tolist()  # (Lqa, )
+                        cur_img_boxes = boxes[batch_idx][img_idx_local]
+                        for word_idx, w in enumerate(cur_words):
+                            if w in object_vocab:
+                                cur_word_region_scores = cur_img_scores[word_idx].data.cpu().numpy()  # (Lr, )
+                                accepted_region_ids = np.nonzero(cur_word_region_scores >= score_thd)[0].tolist()
+                                accepted_region_scores = [float(cur_word_region_scores[i]) for i in accepted_region_ids]
+                                accepted_region_boxes = [cur_img_boxes[i] for i in accepted_region_ids]
+                                sorted_indices = np.argsort(accepted_region_scores)
+                                accepted_region_scores = [accepted_region_scores[i] for i in sorted_indices]
+                                accepted_region_boxes = [accepted_region_boxes[i] for i in sorted_indices]
+                                cur_det_data = {
+                                    "pred": accepted_region_scores,
+                                    "bbox": accepted_region_boxes,
+                                    "word": int(words[batch_idx, ans_idx, word_idx]),
+                                    "qid": int(qids[batch_idx]),
+                                    "vid_name": vid_names[batch_idx],
+                                    "img_idx": img_indices[batch_idx][img_idx_global],  # image file name id
+                                }
+                                q_att_predictions[ans_idx].append(cur_det_data)
+                att_predictions.append(q_att_predictions)
+        return att_predictions
