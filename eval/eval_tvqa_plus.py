@@ -111,10 +111,13 @@ def compute_att_metrics_using_maskrcnn_voc(pred_im2boxes, gt_im2boxes, word2idx)
                 if len(boxes) == 0:
                     continue
             boxlist_by_image[img_name] = BoxList(boxes, image_size=(640, 360), mode="xyxy")
-            boxlist_by_image[img_name].add_field("labels", torch.Tensor(labels))
-            boxlist_by_image[img_name].add_field("scores", torch.Tensor(scores))
+            # boxlist_by_image[img_name].add_field("labels", torch.Tensor(labels))
+            # boxlist_by_image[img_name].add_field("scores", torch.Tensor(scores))
+            boxlist_by_image[img_name].add_field("labels", np.array(labels))
+            boxlist_by_image[img_name].add_field("scores", np.array(scores))
             if add_difficult:
-                boxlist_by_image[img_name].add_field("difficult", torch.Tensor([0] * len(labels)))
+                # boxlist_by_image[img_name].add_field("difficult", torch.Tensor([0] * len(labels)))
+                boxlist_by_image[img_name].add_field("difficult", np.array([0] * len(labels)))
         return boxlist_by_image, list(set(label_vocab))
 
     # pred_im2boxes = get_boxes_by_image(pred_boxes)
@@ -122,8 +125,10 @@ def compute_att_metrics_using_maskrcnn_voc(pred_im2boxes, gt_im2boxes, word2idx)
     gt_im2boxlist_dict, gt_label_vocab = get_boxlist_by_image(gt_im2boxes, word2idx, add_difficult=True)
 
     empty_pred_boxlist = BoxList([[0, 0, 0, 0]], image_size=(640, 360), mode="xyxy")
-    empty_pred_boxlist.add_field("labels", torch.Tensor([0]))
-    empty_pred_boxlist.add_field("scores", torch.Tensor([0]))
+    # empty_pred_boxlist.add_field("labels", torch.Tensor([0]))
+    # empty_pred_boxlist.add_field("scores", torch.Tensor([0]))
+    empty_pred_boxlist.add_field("labels", np.array([0]))
+    empty_pred_boxlist.add_field("scores", np.array([0]))
 
     gt_boxlists = []  # list(BoxList)
     pred_boxlists = []  # list(BoxList)

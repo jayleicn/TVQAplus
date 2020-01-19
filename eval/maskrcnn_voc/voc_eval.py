@@ -47,12 +47,18 @@ def calc_detection_voc_prec_rec(gt_boxlists, pred_boxlists, iou_thresh=0.5):
     match = defaultdict(list)
     gt_labels = []
     for gt_boxlist, pred_boxlist in zip(gt_boxlists, pred_boxlists):
-        pred_bbox = pred_boxlist.bbox.numpy()
-        pred_label = pred_boxlist.get_field("labels").numpy()
-        pred_score = pred_boxlist.get_field("scores").numpy()
-        gt_bbox = gt_boxlist.bbox.numpy()
-        gt_label = gt_boxlist.get_field("labels").numpy()
-        gt_difficult = gt_boxlist.get_field("difficult").numpy()
+        # pred_bbox = pred_boxlist.bbox.numpy()
+        # pred_label = pred_boxlist.get_field("labels").numpy()
+        # pred_score = pred_boxlist.get_field("scores").numpy()
+        # gt_bbox = gt_boxlist.bbox.numpy()
+        # gt_label = gt_boxlist.get_field("labels").numpy()
+        # gt_difficult = gt_boxlist.get_field("difficult").numpy()
+        pred_bbox = pred_boxlist.bbox
+        pred_label = pred_boxlist.get_field("labels")
+        pred_score = pred_boxlist.get_field("scores")
+        gt_bbox = gt_boxlist.bbox
+        gt_label = gt_boxlist.get_field("labels")
+        gt_difficult = gt_boxlist.get_field("difficult")
         gt_labels.append(gt_label)
 
         for l in np.unique(np.concatenate((pred_label, gt_label)).astype(int)):
@@ -82,10 +88,15 @@ def calc_detection_voc_prec_rec(gt_boxlists, pred_boxlists, iou_thresh=0.5):
             pred_bbox_l[:, 2:] += 1
             gt_bbox_l = gt_bbox_l.copy()
             gt_bbox_l[:, 2:] += 1
+            # iou = boxlist_iou(
+            #     BoxList(pred_bbox_l, gt_boxlist.size),
+            #     BoxList(gt_bbox_l, gt_boxlist.size),
+            # ).numpy()
             iou = boxlist_iou(
                 BoxList(pred_bbox_l, gt_boxlist.size),
                 BoxList(gt_bbox_l, gt_boxlist.size),
-            ).numpy()
+            )
+
             gt_index = iou.argmax(axis=1)
             # set -1 if there is no matching ground truth
             gt_index[iou.max(axis=1) < iou_thresh] = -1

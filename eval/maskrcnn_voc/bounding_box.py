@@ -1,7 +1,8 @@
 __author__ = "Jie Lei"
 # Ref: https://github.com/facebookresearch/maskrcnn-benchmark/blob/master/maskrcnn_benchmark/structures/bounding_box.py
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-import torch
+# import torch
+import numpy as np
 
 # transpose
 FLIP_LEFT_RIGHT = 0
@@ -19,17 +20,21 @@ class BoxList(object):
     """
 
     def __init__(self, bbox, image_size, mode="xyxy"):
-        device = bbox.device if isinstance(bbox, torch.Tensor) else torch.device("cpu")
-        bbox = torch.as_tensor(bbox, dtype=torch.float32, device=device)
-        if bbox.ndimension() != 2:
+        # us np instead of torch
+        # device = bbox.device if isinstance(bbox, torch.Tensor) else torch.device("cpu")
+        # bbox = torch.as_tensor(bbox, dtype=torch.float32, device=device)
+        # if bbox.ndimension() != 2:
+        bbox = np.array(bbox, dtype=np.float32)
+        if bbox.ndim != 2:
             print(bbox)
             raise ValueError(
-                "bbox should have 2 dimensions, got {}".format(bbox.ndimension())
+                "bbox should have 2 dimensions, got {}".format(bbox.ndim)
             )
-        if bbox.size(-1) != 4:
+        # if bbox.size(-1) != 4:
+        if bbox.shape[-1] != 4:
             raise ValueError(
                 "last dimenion of bbox should have a "
-                "size of 4, got {}".format(bbox.size(-1))
+                "size of 4, got {}".format(bbox.shape[-1])
             )
         if mode not in ("xyxy", "xywh"):
             raise ValueError("mode should be 'xyxy' or 'xywh'")
@@ -64,12 +69,16 @@ class BoxList(object):
         # self.mode
         xmin, ymin, xmax, ymax = self._split_into_xyxy()
         if mode == "xyxy":
-            bbox = torch.cat((xmin, ymin, xmax, ymax), dim=-1)
+            # bbox = torch.cat((xmin, ymin, xmax, ymax), dim=-1)
+            bbox = np.concatenate((xmin, ymin, xmax, ymax), axis=-1)
             bbox = BoxList(bbox, self.size, mode=mode)
         else:
             TO_REMOVE = 1
-            bbox = torch.cat(
-                (xmin, ymin, xmax - xmin + TO_REMOVE, ymax - ymin + TO_REMOVE), dim=-1
+            # bbox = torch.cat(
+            #     (xmin, ymin, xmax - xmin + TO_REMOVE, ymax - ymin + TO_REMOVE), dim=-1
+            # )
+            bbox = np.concatenate(
+                (xmin, ymin, xmax - xmin + TO_REMOVE, ymax - ymin + TO_REMOVE), axis=-1
             )
             bbox = BoxList(bbox, self.size, mode=mode)
         bbox._copy_extra_fields(self)
@@ -77,27 +86,30 @@ class BoxList(object):
 
     def _split_into_xyxy(self):
         if self.mode == "xyxy":
-            xmin, ymin, xmax, ymax = self.bbox.split(1, dim=-1)
+            # xmin, ymin, xmax, ymax = self.bbox.split(1, dim=-1)
+            xmin, ymin, xmax, ymax = np.split(self.bbox, 4, axis=1)
             return xmin, ymin, xmax, ymax
         elif self.mode == "xywh":
             TO_REMOVE = 1
-            xmin, ymin, w, h = self.bbox.split(1, dim=-1)
+            xmin, ymin, w, h = np.split(self.bbox, 4, axis=1)
             return (
                 xmin,
                 ymin,
-                xmin + (w - TO_REMOVE).clamp(min=0),
-                ymin + (h - TO_REMOVE).clamp(min=0),
+                # xmin + (w - TO_REMOVE).clamp(min=0),
+                # ymin + (h - TO_REMOVE).clamp(min=0),
+                xmin + np.clip(w - TO_REMOVE, 0, None),
+                ymin + np.clip(h - TO_REMOVE, 0, None),
             )
         else:
             raise RuntimeError("Should not be here")
 
-    def resize(self, size, *args, **kwargs):
+    # def resize(self, size, *args, **kwargs):
+    def resize(self, size):
         """
         Returns a resized copy of this bounding box
         :param size: The requested size in pixels, as a 2-tuple:
             (width, height).
         """
-
         ratios = tuple(float(s) / float(s_orig) for s, s_orig in zip(size, self.size))
         if ratios[0] == ratios[1]:
             ratio = ratios[0]
@@ -105,8 +117,10 @@ class BoxList(object):
             bbox = BoxList(scaled_box, size, mode=self.mode)
             # bbox._copy_extra_fields(self)
             for k, v in self.extra_fields.items():
-                if not isinstance(v, torch.Tensor):
-                    v = v.resize(size, *args, **kwargs)
+                # if not isinstance(v, torch.Tensor):
+                if not isinstance(v, np.ndarray):
+                    # v = v.resize(size, *args, **kwargs)
+                    v = v.reshape(size)
                 bbox.add_field(k, v)
             return bbox
 
@@ -116,14 +130,19 @@ class BoxList(object):
         scaled_xmax = xmax * ratio_width
         scaled_ymin = ymin * ratio_height
         scaled_ymax = ymax * ratio_height
-        scaled_box = torch.cat(
-            (scaled_xmin, scaled_ymin, scaled_xmax, scaled_ymax), dim=-1
+        # scaled_box = torch.cat(
+        #     (scaled_xmin, scaled_ymin, scaled_xmax, scaled_ymax), dim=-1
+        # )
+        scaled_box = np.concatenate(
+            (scaled_xmin, scaled_ymin, scaled_xmax, scaled_ymax), axis=-1
         )
         bbox = BoxList(scaled_box, size, mode="xyxy")
         # bbox._copy_extra_fields(self)
         for k, v in self.extra_fields.items():
-            if not isinstance(v, torch.Tensor):
-                v = v.resize(size, *args, **kwargs)
+            # if not isinstance(v, torch.Tensor):
+            if not isinstance(v, np.ndarray):
+                # v = v.resize(size, *args, **kwargs)
+                v = v.resize(size)
             bbox.add_field(k, v)
 
         return bbox.convert(self.mode)
@@ -155,14 +174,19 @@ class BoxList(object):
             transposed_ymin = image_height - ymax
             transposed_ymax = image_height - ymin
 
-        transposed_boxes = torch.cat(
-            (transposed_xmin, transposed_ymin, transposed_xmax, transposed_ymax), dim=-1
+        # transposed_boxes = torch.cat(
+        #     (transposed_xmin, transposed_ymin, transposed_xmax, transposed_ymax), dim=-1
+        # )
+
+        transposed_boxes = np.concatenate(
+            (transposed_xmin, transposed_ymin, transposed_xmax, transposed_ymax), axis=-1
         )
         bbox = BoxList(transposed_boxes, self.size, mode="xyxy")
         # bbox._copy_extra_fields(self)
         for k, v in self.extra_fields.items():
-            if not isinstance(v, torch.Tensor):
-                v = v.transpose(method)
+            # if not isinstance(v, torch.Tensor):
+            if not isinstance(v, np.ndarray):
+                    v = v.transpose(method)
             bbox.add_field(k, v)
         return bbox.convert(self.mode)
 
@@ -174,33 +198,42 @@ class BoxList(object):
         """
         xmin, ymin, xmax, ymax = self._split_into_xyxy()
         w, h = box[2] - box[0], box[3] - box[1]
-        cropped_xmin = (xmin - box[0]).clamp(min=0, max=w)
-        cropped_ymin = (ymin - box[1]).clamp(min=0, max=h)
-        cropped_xmax = (xmax - box[0]).clamp(min=0, max=w)
-        cropped_ymax = (ymax - box[1]).clamp(min=0, max=h)
+        # cropped_xmin = (xmin - box[0]).clamp(min=0, max=w)
+        # cropped_ymin = (ymin - box[1]).clamp(min=0, max=h)
+        # cropped_xmax = (xmax - box[0]).clamp(min=0, max=w)
+        # cropped_ymax = (ymax - box[1]).clamp(min=0, max=h)
+        cropped_xmin = np.clip((xmin - box[0]), 0, w)
+        cropped_ymin = np.clip((ymin - box[1]), 0, h)
+        cropped_xmax = np.clip((xmax - box[0]), 0, w)
+        cropped_ymax = np.clip((ymax - box[1]), 0, h)
 
         # TODO should I filter empty boxes here?
         if False:
             is_empty = (cropped_xmin == cropped_xmax) | (cropped_ymin == cropped_ymax)
 
-        cropped_box = torch.cat(
-            (cropped_xmin, cropped_ymin, cropped_xmax, cropped_ymax), dim=-1
+        # cropped_box = torch.cat(
+        #     (cropped_xmin, cropped_ymin, cropped_xmax, cropped_ymax), dim=-1
+        # )
+        cropped_box = np.concatenate(
+            (cropped_xmin, cropped_ymin, cropped_xmax, cropped_ymax), axis=-1
         )
         bbox = BoxList(cropped_box, (w, h), mode="xyxy")
         # bbox._copy_extra_fields(self)
         for k, v in self.extra_fields.items():
-            if not isinstance(v, torch.Tensor):
-                v = v.crop(box)
+            # if not isinstance(v, torch.Tensor):
+            if not isinstance(v, np.ndarray):
+                    v = v.crop(box)
             bbox.add_field(k, v)
         return bbox.convert(self.mode)
 
     # Tensor-like methods
 
     def to(self, device):
-        bbox = BoxList(self.bbox.to(device), self.size, self.mode)
+        # bbox = BoxList(self.bbox.to(device), self.size, self.mode)
+        bbox = BoxList(self.bbox, self.size, self.mode)
         for k, v in self.extra_fields.items():
-            if hasattr(v, "to"):
-                v = v.to(device)
+            # if hasattr(v, "to"):
+            #     v = v.to(device)
             bbox.add_field(k, v)
         return bbox
 
@@ -215,10 +248,15 @@ class BoxList(object):
 
     def clip_to_image(self, remove_empty=True):
         TO_REMOVE = 1
-        self.bbox[:, 0].clamp_(min=0, max=self.size[0] - TO_REMOVE)
-        self.bbox[:, 1].clamp_(min=0, max=self.size[1] - TO_REMOVE)
-        self.bbox[:, 2].clamp_(min=0, max=self.size[0] - TO_REMOVE)
-        self.bbox[:, 3].clamp_(min=0, max=self.size[1] - TO_REMOVE)
+        # self.bbox[:, 0].clamp_(min=0, max=self.size[0] - TO_REMOVE)
+        # self.bbox[:, 1].clamp_(min=0, max=self.size[1] - TO_REMOVE)
+        # self.bbox[:, 2].clamp_(min=0, max=self.size[0] - TO_REMOVE)
+        # self.bbox[:, 3].clamp_(min=0, max=self.size[1] - TO_REMOVE)
+        self.bbox[:, 0] = np.clip(self.bbox[:, 0], 0, self.size[0] - TO_REMOVE)
+        self.bbox[:, 1] = np.clip(self.bbox[:, 1], 0, self.size[1] - TO_REMOVE)
+        self.bbox[:, 2] = np.clip(self.bbox[:, 2], 0, self.size[0] - TO_REMOVE)
+        self.bbox[:, 3] = np.clip(self.bbox[:, 3], 0, self.size[1] - TO_REMOVE)
+
         if remove_empty:
             box = self.bbox
             keep = (box[:, 3] > box[:, 1]) & (box[:, 2] > box[:, 0])

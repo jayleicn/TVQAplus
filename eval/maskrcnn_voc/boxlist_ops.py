@@ -1,5 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-import torch
+# import torch
+import numpy as np
 
 from bounding_box import BoxList
 
@@ -32,12 +33,15 @@ def boxlist_iou(boxlist1, boxlist2):
 
     box1, box2 = boxlist1.bbox, boxlist2.bbox
 
-    lt = torch.max(box1[:, None, :2], box2[:, :2])  # [N,M,2]
-    rb = torch.min(box1[:, None, 2:], box2[:, 2:])  # [N,M,2]
+    # lt = torch.max(box1[:, None, :2], box2[:, :2])  # [N,M,2]
+    # rb = torch.min(box1[:, None, 2:], box2[:, 2:])  # [N,M,2]
+    lt = np.maximum(box1[:, None, :2], box2[:, :2])  # [N,M,2]
+    rb = np.minimum(box1[:, None, 2:], box2[:, 2:])  # [N,M,2]
 
     TO_REMOVE = 1
 
-    wh = (rb - lt + TO_REMOVE).clamp(min=0)  # [N,M,2]
+    # wh = (rb - lt + TO_REMOVE).clamp(min=0)  # [N,M,2]
+    wh = np.clip(rb - lt + TO_REMOVE, 0, None)  # [N,M,2]
     inter = wh[:, :, 0] * wh[:, :, 1]  # [N,M]
 
     iou = inter / (area1[:, None] + area2 - inter)
@@ -52,7 +56,8 @@ def _cat(tensors, dim=0):
     assert isinstance(tensors, (list, tuple))
     if len(tensors) == 1:
         return tensors[0]
-    return torch.cat(tensors, dim)
+    # return torch.cat(tensors, dim)
+    return np.concatenate(tensors, dim)
 
 
 def cat_boxlist(bboxes):
