@@ -24,7 +24,15 @@ preprocessing and evaluation code for TVQA+ dataset.
 [TVQA+: Spatio-Temporal Grounding for Video Question Answering](https://arxiv.org/abs/1904.11574)<br>
 [Jie Lei](http://www.cs.unc.edu/~jielei/),  [Licheng Yu](http://www.cs.unc.edu/~licheng/), 
 [Tamara L. Berg](http://Tamaraberg.com), [Mohit Bansal](https://www.cs.unc.edu/~mbansal/). 
-   [[PDF]](https://arxiv.org/abs/1904.11574) [[TVQA+ Dataset]](http://tvqa.cs.unc.edu)
+   [[PDF]](https://arxiv.org/abs/1904.11574) 
+
+
+### Resources
+- Data: [TVQA+ dataset](http://tvqa.cs.unc.edu/download_tvqa_plus.html)
+- Website: [http://tvqa.cs.unc.edu](http://tvqa.cs.unc.edu)
+- Submission: [codalab evaluation server](https://competitions.codalab.org/competitions/22705)
+- Related works: [TVR (Moment Retrieval)](https://github.com/jayleicn/TVRetrieval), [TVC (Video Captioning)](https://github.com/jayleicn/TVCaption), [TVQA (Localized VideoQA)](https://github.com/jayleicn/TVQA)
+
 
 
 ### Model
