@@ -28,7 +28,7 @@ preprocessing and evaluation code for TVQA+ dataset.
 
 
 ### Resources
-- Data: [TVQA+ dataset](http://tvqa.cs.unc.edu/download_tvqa_plus.html)
+- Data: [TVQA+ dataset](http://tvqa.cs.unc.edu/download_tvqa_plus.html), please use this [new link](https://nlp.cs.unc.edu/data/jielei/tvqa/tvqa_public_html/download_tvqa_plus.html)
 - Website: [http://tvqa.cs.unc.edu](http://tvqa.cs.unc.edu)
 - Submission: [codalab evaluation server](https://competitions.codalab.org/competitions/22705)
 - Related works: [TVR (Moment Retrieval)](https://github.com/jayleicn/TVRetrieval), [TVC (Video Captioning)](https://github.com/jayleicn/TVCaption), [TVQA (Localized VideoQA)](https://github.com/jayleicn/TVQA)
